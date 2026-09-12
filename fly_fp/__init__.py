@@ -8,6 +8,8 @@ from fly_fp.brain import ReservoirBrain
 from fly_fp.decoder import LinearReadout
 from fly_fp.executor import SafeExecutor, ExecResult
 from fly_fp.loop import FlyOperator
+from fly_fp.keyboard import KeyboardState
+from fly_fp.typer import FlyTypist
 
 __all__ = [
     "Action",
@@ -20,4 +22,6 @@ __all__ = [
     "SafeExecutor",
     "ExecResult",
     "FlyOperator",
+    "KeyboardState",
+    "FlyTypist",
 ]
