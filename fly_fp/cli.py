@@ -1,4 +1,4 @@
-"""CLI entry: fly-fp demo | type | brain | fetch-brain."""
+"""CLI entry: fly-fp demo | type | desktop-fly | brain."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import json
 import sys
 
 from fly_fp import __version__
-from fly_fp.allowlist import ALLOWED_ACTIONS, Action, parse_action
+from fly_fp.allowlist import ALLOWED_ACTIONS, parse_action
 from fly_fp.curriculum import CURRICULUM_GOALS
 from fly_fp.encoder import TerminalObs
 from fly_fp.loop import FlyOperator
@@ -45,7 +45,7 @@ def cmd_once(args: argparse.Namespace) -> int:
     log = op.step(obs)
     _print_log(log)
     if args.json:
-        print(json.dumps({"action": log.action.value, "argv": list(log.result.argv), "exit_code": log.result.exit_code, "blocked": log.result.blocked, "dry_run": log.result.dry_run, "reward": log.reward, "sensory": log.sensory}, indent=2))
+        print(json.dumps({"action": log.action.value, "argv": list(log.result.argv), "exit_code": log.result.exit_code, "blocked": log.result.blocked, "dry_run": log.result.dry_run, "reward": log.reward}, indent=2))
     return 0 if not log.result.blocked else 2
 
 
@@ -55,17 +55,29 @@ def cmd_actions(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_desktop(_: argparse.Namespace) -> int:
+    from fly_fp.desktop_fly import print_howto, status
+    st = status()
+    for k, v in st.items():
+        print(f"{k:20} {v}")
+    print()
+    print_howto()
+    return 0 if st["cloned"] else 1
+
+
 def cmd_brain(_: argparse.Namespace) -> int:
     from fly_fp.malecns import status
     st = status()
     for k, v in st.items():
         print(f"{k:20} {v}")
-    return 0 if st["ready"] and st["flyai_importable"] else 1
+    print("note: default embodied brain is DesktopFly, not fly.ai")
+    return 0
 
 
 def cmd_fetch(_: argparse.Namespace) -> int:
-    from fly_fp.malecns import fetch_brain
-    return fetch_brain()
+    print("fetch-brain (fly.ai) is deprecated. Use:")
+    print("  python -m fly_fp.cli desktop-fly")
+    return 2
 
 
 def cmd_type(args: argparse.Namespace) -> int:
@@ -87,7 +99,7 @@ def cmd_type(args: argparse.Namespace) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="fly-fp")
-    p.add_argument("--brain", default="stub", choices=("stub", "malecns", "flyai"), help="stub=toy 64 LIF. malecns=MaleCNS via fly.ai")
+    p.add_argument("--brain", default="stub", choices=("stub", "malecns", "flyai"))
     p.add_argument("--live", action="store_true")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("demo").set_defaults(fn=cmd_demo)
@@ -103,6 +115,7 @@ def main(argv: list[str] | None = None) -> int:
     t.add_argument("--delay", type=float, default=0.04)
     t.add_argument("--clear", action="store_true")
     t.set_defaults(fn=cmd_type)
+    sub.add_parser("desktop-fly").set_defaults(fn=cmd_desktop)
     sub.add_parser("brain").set_defaults(fn=cmd_brain)
     sub.add_parser("fetch-brain").set_defaults(fn=cmd_fetch)
     args = p.parse_args(argv)
