@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fly-fp-cli"
+version = "0.1.0"
+description = "Reservoir wrapper: fruit-fly CNS activity picks Founder+ CLI commands behind a hard allowlist."
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+authors = [{name = "Sarbeh"}]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+fly-fp = "fly_fp.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["fly_fp*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

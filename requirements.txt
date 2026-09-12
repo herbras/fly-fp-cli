@@ -1,0 +1,3 @@
+# Runtime: stdlib only.
+# Optional:
+# pytest>=7.0
