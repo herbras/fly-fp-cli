@@ -1,8 +1,7 @@
-"""Frozen reservoir.
+"""Brain factory.
 
-Default: a tiny LIF network that you can run on a laptop with no MaleCNS
-download. Optional adapter talks to alextitonis/fly.ai FlyBrain if it is
-importable and FLY_DATA weights exist.
+stub     = 64 random LIF units (NOT the fly).
+malecns  = FlyBrain on MaleCNS v1.0 weights.npz (the actual wiring).
 """
 
 from __future__ import annotations
@@ -14,12 +13,11 @@ from typing import Protocol
 
 class BrainLike(Protocol):
     def step(self, sensory: list[float]) -> list[float]: ...
-
     def reset(self) -> None: ...
 
 
 class ReservoirBrain:
-    """64 leaky units, fixed random wiring. Sensory channels drive the first 8."""
+    """64 leaky units. Use only when MaleCNS weights are not on disk."""
 
     def __init__(self, n: int = 64, seed: int = 7, dt_tau: float = 0.2):
         rng = random.Random(seed)
@@ -65,65 +63,10 @@ class ReservoirBrain:
         return [x / steps for x in acc]
 
 
-class FlyAiAdapter:
-    """Thin wrapper around fly.ai if present. Falls back with a clear error."""
-
-    def __init__(self, steps: int = 12):
-        try:
-            from fly_brain import FlyBrain  # type: ignore
-        except ImportError as exc:
-            raise ImportError(
-                "fly.ai is not installed. Clone https://github.com/alextitonis/fly.ai "
-                "and run `python build_brain.py`, then set PYTHONPATH."
-            ) from exc
-        self.brain = FlyBrain(device="auto")
-        self.steps = steps
-        self._cell_groups = {
-            0: ("Gr64f", None),
-            1: ("Gr66a", None),
-            2: ("LPLC2", "L"),
-            3: ("LC10a", "L"),
-        }
-
-    def reset(self) -> None:
-        pass
-
-    def step(self, sensory: list[float]) -> list[float]:
-        inject = []
-        for ch, (typ, side) in self._cell_groups.items():
-            if ch >= len(sensory) or sensory[ch] <= 0:
-                continue
-            try:
-                idx = self.brain.cells([typ], side=side)
-            except Exception:
-                continue
-            inject.append((idx, float(sensory[ch])))
-        for _ in range(self.steps):
-            self.brain.step(inject=inject or None)
-        try:
-            dn = self.brain.cells(["descending_neuron"])
-        except Exception:
-            dn = []
-        vec = [0.0] * 64
-        if hasattr(self.brain, "v") and dn:
-            for i, neuron in enumerate(list(dn)[:64]):
-                try:
-                    vec[i] = float(self.brain.v[int(neuron)])
-                except Exception:
-                    pass
-        else:
-            for i, s in enumerate(sensory[:8]):
-                vec[i] = s
-        return vec
-
-    def rollout(self, sensory: list[float], steps: int = 12) -> list[float]:
-        self.steps = steps
-        return self.step(sensory)
-
-
 def make_brain(kind: str = "stub"):
     if kind in ("stub", "reservoir"):
         return ReservoirBrain()
-    if kind in ("flyai", "malecns"):
-        return FlyAiAdapter()
+    if kind in ("flyai", "malecns", "male-cns"):
+        from fly_fp.malecns import MaleCNSBrain
+        return MaleCNSBrain()
     raise ValueError(f"unknown brain kind: {kind}")
