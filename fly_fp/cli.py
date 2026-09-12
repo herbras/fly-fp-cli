@@ -1,4 +1,4 @@
-"""CLI entry: fly-fp dry-run | live | demo | train."""
+"""CLI entry: fly-fp dry-run | live | demo | type."""
 
 from __future__ import annotations
 
@@ -7,10 +7,12 @@ import json
 import sys
 
 from fly_fp import __version__
-from fly_fp.allowlist import ALLOWED_ACTIONS, Action
+from fly_fp.allowlist import ALLOWED_ACTIONS, Action, parse_action
 from fly_fp.curriculum import CURRICULUM_GOALS
 from fly_fp.encoder import TerminalObs
 from fly_fp.loop import FlyOperator
+from fly_fp.tui import render_cockpit
+from fly_fp.typer import FlyTypist
 
 
 def _print_log(log) -> None:
@@ -66,6 +68,25 @@ def cmd_actions(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_type(args: argparse.Namespace) -> int:
+    action = parse_action(args.action)
+    fly = FlyTypist(target_action=action)
+    delay = max(args.delay, 0.0)
+    last = None
+    for tick in fly.type_all():
+        last = tick
+        frame = render_cockpit(tick.buffer, tick.meaning, tick.key, tick.spikes, fly.state)
+        print("\033[2J\033[H" + frame if args.clear else frame)
+        print()
+        if delay:
+            import time
+
+            time.sleep(delay)
+    if last and last.sense.get("done"):
+        print(f"typed: {fly.state.buffer.strip()}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(
         prog="fly-fp",
@@ -87,6 +108,12 @@ def main(argv: list[str] | None = None) -> int:
 
     a = sub.add_parser("actions", help="print the allowlist")
     a.set_defaults(fn=cmd_actions)
+
+    t = sub.add_parser("type", help="fly types an allowlisted command key by key")
+    t.add_argument("--action", default="skills_list")
+    t.add_argument("--delay", type=float, default=0.04)
+    t.add_argument("--clear", action="store_true", help="redraw like a cockpit")
+    t.set_defaults(fn=cmd_type)
 
     args = p.parse_args(argv)
     return args.fn(args)
