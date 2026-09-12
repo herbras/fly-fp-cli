@@ -1,31 +1,38 @@
 # fly-fp-cli
 
-Allowlisted Founder+ CLI driven by either a **toy 64-unit LIF** (`--brain stub`) or the **real MaleCNS v1.0 connectome** (`--brain malecns`).
+Allowlisted Founder+ CLI (`fp …`) plus a pointer to a **non-crypto** embodied fly.
 
-`stub` is **not** a fly brain. Say that out loud. The real wiring is 166,700 neurons / 25.6M synapses from Janelia + Cambridge + Google, simulated as LIF by [alextitonis/fly.ai](https://github.com/alextitonis/fly.ai).
+The fly does **not** run:
 
-## 1. Toy path (laptop, no download)
+```sh
+curl -fsSL https://academy.founderplus.id/install.sh | sh
+```
+
+That stays on the host, once.
+
+## Otak yang dipakai (bukan token)
+
+[DenisSergeevitch/desktop-fly](https://github.com/DenisSergeevitch/desktop-fly) — FlyWire + ekstrak kaki MaleCNS, app desktop, kode ada, bukan coin.
+
+```sh
+python -m fly_fp.cli desktop-fly
+git clone https://github.com/DenisSergeevitch/desktop-fly.git ~/src/desktop-fly
+cd ~/src/desktop-fly && ./build.sh && ./DesktopFly   # macOS 13+
+```
+
+Detail: [docs/DESKTOP_FLY.md](docs/DESKTOP_FLY.md)
+
+NeuroCraft Fly belum rilis kode. fly.ai / ticker diabaikan.
+
+## CLI Founder+ (repo ini)
 
 ```sh
 git clone https://github.com/herbras/fly-fp-cli.git
 cd fly-fp-cli && pip install -e ".[dev]" && pytest
 python -m fly_fp.cli type --action skills_list --delay 0.03
+python -m fly_fp.cli demo
 ```
 
-## 2. Real brain path
+`--brain stub` = 64 LIF mainan untuk tes pipeline. Bukan connectome.
 
-```sh
-python -m fly_fp.cli brain              # ready? fly.ai importable?
-python -m fly_fp.cli fetch-brain        # clone fly.ai + build_brain.py (~1.1 GB)
-export PYTHONPATH=$HOME/src/fly.ai:$PYTHONPATH
-export FLY_DATA=$HOME/fly-data
-python -m fly_fp.cli --brain malecns brain
-python -m fly_fp.cli --brain malecns type --action skills_list
-```
-
-`--brain malecns` without `~/fly-data/weights.npz` **exits**. It does not silently use the stub.
-
-Sensor map into annotated cell types: `Gr64f` sweet, `Gr66a` bitter, `LPLC2` looming, `LC10a` target.
-Readout from descending neurons: `DNa02`, `DNp01`, `DNg100`, `MDN`.
-
-MaleCNS data CC BY 4.0. fly.ai MIT. This repo MIT. Not affiliated with Founder+ / Janelia / Google. Not a biological emulation.
+MIT. Data FlyWire / MaleCNS tetap lisensi hulu (CC BY). Bukan afiliasi Founder+, Janelia, Mojang, atau DesktopFly.
