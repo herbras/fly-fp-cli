@@ -1,4 +1,4 @@
-"""CLI entry: fly-fp dry-run | live | demo | type."""
+"""CLI entry: fly-fp demo | type | brain | fetch-brain."""
 
 from __future__ import annotations
 
@@ -45,20 +45,7 @@ def cmd_once(args: argparse.Namespace) -> int:
     log = op.step(obs)
     _print_log(log)
     if args.json:
-        print(
-            json.dumps(
-                {
-                    "action": log.action.value,
-                    "argv": list(log.result.argv),
-                    "exit_code": log.result.exit_code,
-                    "blocked": log.result.blocked,
-                    "dry_run": log.result.dry_run,
-                    "reward": log.reward,
-                    "sensory": log.sensory,
-                },
-                indent=2,
-            )
-        )
+        print(json.dumps({"action": log.action.value, "argv": list(log.result.argv), "exit_code": log.result.exit_code, "blocked": log.result.blocked, "dry_run": log.result.dry_run, "reward": log.reward, "sensory": log.sensory}, indent=2))
     return 0 if not log.result.blocked else 2
 
 
@@ -68,9 +55,21 @@ def cmd_actions(_: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_brain(_: argparse.Namespace) -> int:
+    from fly_fp.malecns import status
+    st = status()
+    for k, v in st.items():
+        print(f"{k:20} {v}")
+    return 0 if st["ready"] and st["flyai_importable"] else 1
+
+
+def cmd_fetch(_: argparse.Namespace) -> int:
+    from fly_fp.malecns import fetch_brain
+    return fetch_brain()
+
+
 def cmd_type(args: argparse.Namespace) -> int:
-    action = parse_action(args.action)
-    fly = FlyTypist(target_action=action)
+    fly = FlyTypist(target_action=parse_action(args.action), brain_kind=args.brain)
     delay = max(args.delay, 0.0)
     last = None
     for tick in fly.type_all():
@@ -80,7 +79,6 @@ def cmd_type(args: argparse.Namespace) -> int:
         print()
         if delay:
             import time
-
             time.sleep(delay)
     if last and last.sense.get("done"):
         print(f"typed: {fly.state.buffer.strip()}")
@@ -88,33 +86,25 @@ def cmd_type(args: argparse.Namespace) -> int:
 
 
 def main(argv: list[str] | None = None) -> int:
-    p = argparse.ArgumentParser(
-        prog="fly-fp",
-        description="Fruit-fly reservoir that may only emit allowlisted Founder+ CLI commands.",
-    )
-    p.add_argument("--brain", default="stub", choices=("stub", "flyai"))
-    p.add_argument("--live", action="store_true", help="actually exec fp (still allowlisted)")
+    p = argparse.ArgumentParser(prog="fly-fp")
+    p.add_argument("--brain", default="stub", choices=("stub", "malecns", "flyai"), help="stub=toy 64 LIF. malecns=MaleCNS via fly.ai")
+    p.add_argument("--live", action="store_true")
     sub = p.add_subparsers(dest="cmd", required=True)
-
-    d = sub.add_parser("demo", help="run the 9-goal curriculum")
-    d.set_defaults(fn=cmd_demo)
-
-    o = sub.add_parser("once", help="one observation → one action")
+    sub.add_parser("demo").set_defaults(fn=cmd_demo)
+    o = sub.add_parser("once")
     o.add_argument("--stdout", default="")
     o.add_argument("--stderr", default="")
     o.add_argument("--goal", nargs="*")
     o.add_argument("--json", action="store_true")
     o.set_defaults(fn=cmd_once)
-
-    a = sub.add_parser("actions", help="print the allowlist")
-    a.set_defaults(fn=cmd_actions)
-
-    t = sub.add_parser("type", help="fly types an allowlisted command key by key")
+    sub.add_parser("actions").set_defaults(fn=cmd_actions)
+    t = sub.add_parser("type")
     t.add_argument("--action", default="skills_list")
     t.add_argument("--delay", type=float, default=0.04)
-    t.add_argument("--clear", action="store_true", help="redraw like a cockpit")
+    t.add_argument("--clear", action="store_true")
     t.set_defaults(fn=cmd_type)
-
+    sub.add_parser("brain").set_defaults(fn=cmd_brain)
+    sub.add_parser("fetch-brain").set_defaults(fn=cmd_fetch)
     args = p.parse_args(argv)
     return args.fn(args)
 
