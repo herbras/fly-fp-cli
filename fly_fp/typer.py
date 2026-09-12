@@ -1,15 +1,10 @@
-"""Closed loop that types an allowlisted command one key at a time.
-
-Meaning is not inside a letter. Meaning is:
-  buffer parsed as tokens  +  prefix vs allowlist  +  looming if forbidden.
-"""
+"""Type allowlisted fp commands one key at a time."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from fly_fp.allowlist import Action, is_forbidden
-from fly_fp.brain import ReservoirBrain
 from fly_fp.encoder import TerminalObs, encode
 from fly_fp.keyboard import (
     KeyboardState,
@@ -63,8 +58,9 @@ def meaning_of(state: KeyboardState) -> str:
 
 
 class FlyTypist:
-    def __init__(self, target_action: Action = Action.SKILLS_LIST):
-        self.brain = ReservoirBrain(seed=11)
+    def __init__(self, target_action: Action = Action.SKILLS_LIST, brain_kind: str = "stub"):
+        from fly_fp.brain import make_brain
+        self.brain = make_brain(brain_kind)
         self.state = KeyboardState(target=command_target(target_action))
         self.action = target_action
 
@@ -76,28 +72,16 @@ class FlyTypist:
             apply_key(self.state, kid)
         sense = sense_keyboard(self.state)
         sensory = [
-            sense["hand_x"],
-            sense["hand_y"],
-            sense["has_fp"],
-            sense["prefix_ok"],
-            sense["forbidden"],
-            sense["done"],
-            sense["progress"],
-            sense["token_count"],
+            sense["hand_x"], sense["hand_y"], sense["has_fp"], sense["prefix_ok"],
+            sense["forbidden"], sense["done"], sense["progress"], sense["token_count"],
         ]
         obs = encode(TerminalObs(stdout=self.state.buffer))
         mixed = [(sensory[i] + obs[i]) * 0.5 for i in range(8)]
         spikes = self.brain.rollout(mixed, steps=8)
-        return TypeTick(
-            key=kid or "",
-            buffer=self.state.buffer,
-            sense=sense,
-            meaning=meaning_of(self.state),
-            spikes=spikes,
-        )
+        return TypeTick(kid or "", self.state.buffer, sense, meaning_of(self.state), spikes)
 
     def type_all(self, max_keys: int = 80) -> list[TypeTick]:
-        ticks: list[TypeTick] = []
+        ticks = []
         for _ in range(max_keys):
             t = self.tick()
             ticks.append(t)
